@@ -18,26 +18,6 @@ class ExerciseSchema(Schema):
         if value not in valid:
             raise ValidationError(f'Category must be one of: {", ".join(valid)}')
 
-class WorkoutSchema(Schema):
-    id = fields.Int(dump_only=True)
-    date = fields.Date(required=True, format='%Y-%m-%d')
-    duration_minutes = fields.Int(required=True)
-    notes = fields.Str()
-    workout_exercises = fields.Nested('WorkoutExerciseSchema', many=True, dump_only=True)
-    exercises = fields.Nested('ExerciseSchema', many=True, dump_only=True)
-    
-    @validates('date')
-    def validate_date(self, value):
-        if value > datetime.now().date():
-            raise ValidationError('Date cannot be in the future')
-    
-    @validates('duration_minutes')
-    def validate_duration(self, value):
-        if value <= 0:
-            raise ValidationError('Duration must be > 0')
-        if value > 1440:
-            raise ValidationError('Duration cannot exceed 1440 minutes')
-
 class WorkoutExerciseSchema(Schema):
     id = fields.Int(dump_only=True)
     workout_id = fields.Int(required=True)
@@ -45,8 +25,9 @@ class WorkoutExerciseSchema(Schema):
     reps = fields.Int(allow_none=True)
     sets = fields.Int(allow_none=True)
     duration_seconds = fields.Int(allow_none=True)
-    workout = fields.Nested('WorkoutSchema', dump_only=True)
-    exercise = fields.Nested('ExerciseSchema', dump_only=True)
+    # Remove nested relationships to avoid recursion
+    # workout = fields.Nested('WorkoutSchema', dump_only=True)
+    # exercise = fields.Nested('ExerciseSchema', dump_only=True)
     
     @validates_schema
     def validate_reps_or_duration(self, data, **kwargs):
@@ -84,8 +65,31 @@ class WorkoutExerciseSchema(Schema):
         if value is not None and value > 7200:
             raise ValidationError('Duration cannot exceed 7200 seconds')
 
+class WorkoutSchema(Schema):
+    id = fields.Int(dump_only=True)
+    date = fields.Date(required=True, format='%Y-%m-%d')
+    duration_minutes = fields.Int(required=True)
+    notes = fields.Str()
+    workout_exercises = fields.Nested('WorkoutExerciseSchema', many=True, dump_only=True)
+    # Remove exercises nested to avoid recursion
+    # exercises = fields.Nested('ExerciseSchema', many=True, dump_only=True)
+    
+    @validates('date')
+    def validate_date(self, value):
+        if value > datetime.now().date():
+            raise ValidationError('Date cannot be in the future')
+    
+    @validates('duration_minutes')
+    def validate_duration(self, value):
+        if value <= 0:
+            raise ValidationError('Duration must be > 0')
+        if value > 1440:
+            raise ValidationError('Duration cannot exceed 1440 minutes')
+
+# Create schema instances
 exercise_schema = ExerciseSchema()
 exercises_schema = ExerciseSchema(many=True)
 workout_schema = WorkoutSchema()
 workouts_schema = WorkoutSchema(many=True)
 workout_exercise_schema = WorkoutExerciseSchema()
+workout_exercises_schema = WorkoutExerciseSchema(many=True)
